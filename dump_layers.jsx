@@ -35,11 +35,11 @@ function dumpLayers(doc, layers) {
 		var layer = layers[i];
 		if (layer.kind == LayerKind.SOLIDFILL)
 			continue;
-		if (layer.kind == undefined)
+		else if (layer.kind == undefined)
+			layer = layer.merge();
+		else if (layer.kind == LayerKind.SMARTOBJECT)
 			continue;
-		if (layer.kind == LayerKind.SMARTOBJECT)
-			continue;
-		if (layer.kind == LayerKind.BRIGHTNESSCONTRAST)
+		else if (layer.kind == LayerKind.BRIGHTNESSCONTRAST)
 			continue;
 
 		var layer_left = layer.bounds[0] > 0 ? layer.bounds[0] : 0;
@@ -56,7 +56,7 @@ function dumpLayers(doc, layers) {
 		app.activeDocument = tmpDoc;
 		tmpDoc.paste();
 		tmpDoc.layers[1].remove();
-		tmpDoc.saveAs(new File(proj_root + "out/" + layer_filename));
+		tmpDoc.saveAs(new File(proj_root + "out/" + layer_filename), new PNGSaveOptions());
 		tmpDoc.close(SaveOptions.DONOTSAVECHANGES);
 	}
 
