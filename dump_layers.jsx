@@ -8,13 +8,13 @@ function main() {
 }
 
 function dumpLayers(doc, layers) {
-	/*
-	// save layer info
 	var text = '';
 	for (var i=0; i<layers.length; i++) {
+		// save layer info
 		var layer = layers[i];
+		var layer_filename = layer.name.replace(" ", "_").replace(":", "_").replace("\/", "_");
 		text += '==========\n';
-		text += layer.name + '\n';
+		text += layer_filename + '\n';
 		text += layer.bounds + '\n';
 		text += layer.kind;
 		if (layer instanceof ArtLayer)
@@ -22,15 +22,8 @@ function dumpLayers(doc, layers) {
 		else if (layer instanceof LayerSet)
 			text += 'LayerSet\n';
 		text += '\n';
-	}
-	var file = File(proj_root + "out/layers.txt");
-	file.open("e", "TEXT", "????");
-	file.writeln(text);
-	file.close();
-	*/
 
-	// save layer image
-	for (var i=0; i<layers.length; i++) {
+		// save layer image
 		app.activeDocument = doc;
 		var layer = layers[i];
 		if (layer.kind == LayerKind.SOLIDFILL)
@@ -48,7 +41,6 @@ function dumpLayers(doc, layers) {
 		var layer_bottom = layer.bounds[3] < doc.height ? layer.bounds[3] : doc.height;
 		var layer_width = layer_right - layer_left;
 		var layer_height = layer_bottom - layer_top;
-		var layer_filename = layer.name.replace(" ", "_").replace(":", "_");
 
 		layer.copy();
 
@@ -59,6 +51,11 @@ function dumpLayers(doc, layers) {
 		tmpDoc.saveAs(new File(proj_root + "out/" + layer_filename), new PNGSaveOptions());
 		tmpDoc.close(SaveOptions.DONOTSAVECHANGES);
 	}
+
+	var file = File(proj_root + "out/layers.txt");
+	file.open("e", "TEXT", "????");
+	file.writeln(text);
+	file.close();
 
 	alert("OK");
 }
