@@ -2,28 +2,54 @@
 var proj_root = "/Users/linyun/Documents/ws-test/psd2xml/";
 
 function main() {
+	app.preferences.typeUnits = TypeUnits.POINTS;
+	app.preferences.rulerUnits = Units.POINTS;
 	var doc = app.activeDocument;
 	var layers = doc.layers;
 	dumpLayers(doc, layers);
 }
 
-function dumpLayers(doc, layers) {
-	var text = '';
-	for (var i=0; i<layers.length; i++) {
-		// save layer info
-		var layer = layers[i];
-		var layer_filename = layer.name.replace(" ", "_").replace(":", "_").replace("\/", "_");
-		text += '==========\n';
-		text += layer_filename + '\n';
-		text += layer.bounds + '\n';
-		text += layer.kind;
-		if (layer instanceof ArtLayer)
-			text += 'ArtLayer\n';
-		else if (layer instanceof LayerSet)
-			text += 'LayerSet\n';
-		text += '\n';
+function getLayerName(doc, layer) {
+	var layer_name = doc.name.replace(".psd", "") + "_" + layer.name.replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_");
+	return layer_name;
+}
 
-		// save layer image
+function getLayerInfo(doc, layer) {
+	text = '==========\n';
+	text += getLayerName(doc, layer) + '\n';
+	text += layer.bounds + '\n';
+	text += layer.kind;
+	if (layer instanceof ArtLayer)
+		text += 'ArtLayer\n';
+	else if (layer instanceof LayerSet)
+		text += 'LayerSet\n';
+	text += '\n';
+	return text;
+}
+
+function saveLayerImage(doc, layer) {
+	var layer_left = layer.bounds[0] > 0 ? layer.bounds[0] : 0;
+	var layer_top = layer.bounds[1] > 0 ? layer.bounds[1] : 0;
+	var layer_right = layer.bounds[2] < doc.width ? layer.bounds[2] : doc.width;
+	var layer_bottom = layer.bounds[3] < doc.height ? layer.bounds[3] : doc.height;
+	var layer_width = layer_right - layer_left;
+	var layer_height = layer_bottom - layer_top;
+
+	layer.copy();
+	var tmpDoc = app.documents.add(layer_width, layer_height, 72, getLayerName(doc, layer), NewDocumentMode.RGB);
+	app.activeDocument = tmpDoc;
+	tmpDoc.paste();
+	tmpDoc.layers[1].remove();
+	tmpDoc.saveAs(new File(proj_root + "out/" + getLayerName(doc, layer)), new PNGSaveOptions());
+	tmpDoc.close(SaveOptions.DONOTSAVECHANGES);
+
+}
+
+function dumpLayers(doc, layers) {
+	var text = doc.name + "\n"
+		+ doc.width + "\n"
+		+ doc.height + "\n";
+	for (var i=0; i<layers.length; i++) {
 		app.activeDocument = doc;
 		var layer = layers[i];
 		if (layer.kind == LayerKind.SOLIDFILL)
@@ -34,22 +60,11 @@ function dumpLayers(doc, layers) {
 			continue;
 		else if (layer.kind == LayerKind.BRIGHTNESSCONTRAST)
 			continue;
+		else if (layer.isBackgroundLayer)
+			continue;
 
-		var layer_left = layer.bounds[0] > 0 ? layer.bounds[0] : 0;
-		var layer_top = layer.bounds[1] > 0 ? layer.bounds[1] : 0;
-		var layer_right = layer.bounds[2] < doc.width ? layer.bounds[2] : doc.width;
-		var layer_bottom = layer.bounds[3] < doc.height ? layer.bounds[3] : doc.height;
-		var layer_width = layer_right - layer_left;
-		var layer_height = layer_bottom - layer_top;
-
-		layer.copy();
-
-		var tmpDoc = app.documents.add(layer_width, layer_height, 72, layer_filename, NewDocumentMode.RGB);
-		app.activeDocument = tmpDoc;
-		tmpDoc.paste();
-		tmpDoc.layers[1].remove();
-		tmpDoc.saveAs(new File(proj_root + "out/" + layer_filename), new PNGSaveOptions());
-		tmpDoc.close(SaveOptions.DONOTSAVECHANGES);
+		text += getLayerInfo(doc, layer);
+		saveLayerImage(doc, layer);
 	}
 
 	var file = File(proj_root + "out/layers.txt");
