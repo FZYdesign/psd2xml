@@ -1,7 +1,6 @@
 <ImageView
-	android:id="@+id/{{ layer.name }}"
-	android:layout_width="{{ layer.layout_width }}"
+	android:id="@+id/{{ info.name }}"
 	android:layout_height="wrap_content"
-	android:scaleType="fitXY"
-	android:src="@drawable/{{ layer.name }}" />
+	{% for k, v in info.iteritems() %}android:{{ k }}="{{ v }}"
+	{% endfor %}/>
 

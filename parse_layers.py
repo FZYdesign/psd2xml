@@ -21,12 +21,21 @@ def bound2num(bound):
 	return int(bound.replace('pt', '').strip());
 
 def layer2view(parent, layer):
-	if layer['bounds'][0] < 5 and (parent['width'] - layer['bounds'][2])  < 5:
-		layer['layout_width'] = 'match_parent'
+	info = {
+			'name': layer['name'],
+			'src': '@drawable/' + layer['name'],
+			}
+	left_margin = layer['bounds'][0]
+	right_margin = parent['width'] - layer['bounds'][2]
+	if left_margin < 5 and right_margin < 5:
+		info['layout_width'] = 'match_parent'
+		info['scaleType'] = 'fitXY'
 	else:
-		layer['layout_width'] = 'wrap_content'
+		info['layout_width'] = 'wrap_content'
+		if abs(left_margin - right_margin) < 5:
+			info['layout_gravity'] = 'center_horizontal'
 	template = env.get_template('ImageView.xml')
-	view = template.render(layer=layer)
+	view = template.render(info=info)
 	return view 
 
 def layerset2layout(layer_set, is_root=False):
