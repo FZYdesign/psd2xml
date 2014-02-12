@@ -15,7 +15,7 @@ function filterLayer(layer) {
 	if (!layer.visible || layer.isBackgroundLayer)
 		return false;
 
-	if (layer.kind == LayerKind.BRIGHTNESSCONTRAST || layer.kind == undefined)
+	if (layer.kind == LayerKind.BRIGHTNESSCONTRAST)
 		layer = layer.merge();
 	else if (layer.kind == LayerKind.SOLIDFILL || layer.kind == LayerKind.SMARTOBJECT)
 		layer.rasterize(RasterizeType.ENTIRELAYER);

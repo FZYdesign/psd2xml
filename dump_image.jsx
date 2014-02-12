@@ -1,10 +1,15 @@
 
 // @include 'common.jsx'
 
-function saveLayerImage(doc, layer) {
-	if (!filterLayer(layer))
-		return;
+function saveLayerImage(doc, layer, prefix) {
+	try {
+		_saveLayerImage(doc, layer, prefix);
+	} catch (e) {
+		alert(e.description);
+	}
+}
 
+function _saveLayerImage(doc, layer, prefix) {
 	var layer_left = layer.bounds[0] > 0 ? layer.bounds[0] : 0;
 	var layer_top = layer.bounds[1] > 0 ? layer.bounds[1] : 0;
 	var layer_right = layer.bounds[2] < doc.width ? layer.bounds[2] : doc.width;
@@ -16,34 +21,46 @@ function saveLayerImage(doc, layer) {
 
 	layer.copy();
 
-	var tmpDoc = app.documents.add(layer_width, layer_height, 72, getLayerName(doc, layer), NewDocumentMode.RGB);
+	filename = [prefix, layer.name].join('_').replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_");
+	var tmpDoc = app.documents.add(layer_width, layer_height, 72, filename, NewDocumentMode.RGB);
 	app.activeDocument = tmpDoc;
 	tmpDoc.paste();
 	tmpDoc.layers[1].remove();
-	tmpDoc.saveAs(new File(proj_root + "out/" + getLayerName(doc, layer)), new PNGSaveOptions());
+	tmpDoc.saveAs(new File(proj_root + "out/" + filename), new PNGSaveOptions());
 	tmpDoc.close(SaveOptions.DONOTSAVECHANGES);
+	app.activeDocument = doc;
 
 }
 
-function dumpImages() {
-	var doc = app.activeDocument;
-	var layers = doc.layers;
+function dumpImages(doc, layerSet, prefix, layerNum) {
+	var layers = layerSet.layers;
 	for (var i=0; i<layers.length; i++) {
-		app.activeDocument = doc;
 		var layer = layers[i];
-		saveLayerImage(doc, layer);
+		if (!filterLayer(layer))
+			continue;
+
+		if (layer.constructor == LayerSet) {
+			if (layerNum == 0) {
+				dumpImages(doc, layer, [prefix, layer.name].join('_'), layerNum + 1);
+			} else {
+				layer = layer.merge();
+				saveLayerImage(doc, layer, prefix);
+			}
+		} else
+			saveLayerImage(doc, layer, prefix);
 	}
 }
 
 function test(i) {
 	var doc = app.activeDocument;
 	var layers = doc.layers;
-	saveLayerImage(doc, layers[i]);
+	saveLayerImage(doc, layers[i], 0);
 }
 
 function main() {
 	init();
-	dumpImages();
+	var doc = app.activeDocument;
+	dumpImages(doc, doc, doc.name.replace('.psd', ''), 0);
 	//test(0);
 }
 
