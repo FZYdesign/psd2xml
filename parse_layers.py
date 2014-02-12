@@ -4,6 +4,7 @@ import sys
 import re
 import pprint
 from jinja2 import Environment, PackageLoader, FileSystemLoader, ChoiceLoader
+import json
 sys.path += ['..']
 
 def init_env():
@@ -19,46 +20,37 @@ def init_env():
 def bound2num(bound):
 	return int(bound.replace('pt', '').strip());
 
+def layer2view(parent, layer):
+	if layer['bounds'][0] < 5 and (parent['width'] - layer['bounds'][2])  < 5:
+		layer['layout_width'] = 'match_parent'
+	else:
+		layer['layout_width'] = 'wrap_content'
+	template = env.get_template('ImageView.xml')
+	view = template.render(layer=layer)
+	return view 
+
+def layerset2layout(layer_set, is_root=False):
+	child_views = []
+	for layer in layer_set['layers']:
+		view = layer2view(layer_set, layer)
+		child_views.append(view)
+	child_views = ''.join(child_views)
+
+	layer_set['layout_type'] = 'LinearLayout'
+	layer_set['orientation'] = 'vertical'
+	layer_set['is_root'] = is_root
+	layer_set['child_views'] = child_views
+	template = env.get_template('LinearLayout.xml')
+	layout = template.render(layer_set=layer_set)
+	return layout
+
 if __name__ == '__main__':
 	s = open('out/layers.txt').read()
-	infos = s.split('=' * 10)
-
-	# parse doc info
-	doc = infos[0].strip()
-	doc_name, doc_width, doc_height = doc.splitlines()
-	doc_width = bound2num(doc_width)
-	doc_height = bound2num(doc_height);
-
-	# parse layers info
-	layers = infos[1:]
-	layers_info = []
-	for layer in layers[1:]:
-		layer = layer.strip()
-		if not layer:
-			continue
-
-		name, bounds, layer_type = layer.splitlines()
-		l, t, r, b = bounds = map(bound2num, bounds.split(','))
-		info = { 'name': name.strip(),
-				'bounds': bounds,
-				'layer_type': layer_type,
-				}
-		if abs(l) < 5 and abs(r - doc_width) < 5:
-			info['width'] = 'match_parent'
-		else:
-			info['widh'] = 'wrap_content'
-		layers_info.append(info)
-	layers_info = sorted(layers_info, key = lambda x:x['bounds'][1])
+	doc = json.loads(s)
 
 	# render xml
 	env = init_env()
-	content = ''
-	for info in layers_info:
-		template = env.get_template('linear_layout.xml')
-		content += template.render(info=info)
-	
-	template = env.get_template('linear_root.xml')
-	root_layout = template.render(content=content)
 
+	root_layout = layerset2layout(doc, True)
 	print root_layout
 

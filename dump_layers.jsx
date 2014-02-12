@@ -9,11 +9,8 @@ function getLayersInfo(layers) {
 			continue;
 
 		var _layer = {};
-		_layer.name = layer.name;
-		_layer.left = layer.bounds[0].value;
-		_layer.ttop = layer.bounds[1].value;
-		_layer.right = layer.bounds[2].value;
-		_layer.bottom = layer.bounds[3].value;
+		_layer.name = getLayerName(app.activeDocument, layer);
+		_layer.bounds = [layer.bounds[0].value, layer.bounds[1].value, layer.bounds[2].value, layer.bounds[3].value];
 
 		if (layer.constructor == ArtLayer)
 			_layer.kind = "" + layer.kind;

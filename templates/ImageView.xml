@@ -1,0 +1,7 @@
+<ImageView
+	android:id="@+id/{{ layer.name }}"
+	android:layout_width="{{ layer.layout_width }}"
+	android:layout_height="wrap_content"
+	android:scaleType="fitXY"
+	android:src="@drawable/{{ layer.name }}" />
+
