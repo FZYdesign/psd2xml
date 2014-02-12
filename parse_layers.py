@@ -20,37 +20,54 @@ def init_env():
 def bound2num(bound):
 	return int(bound.replace('pt', '').strip());
 
-def layer2view(parent, layer):
+def layer2view(parent, layer, pre_layer):
 	info = {
 			'name': layer['name'],
 			'src': '@drawable/' + layer['name'],
 			}
-	left_margin = layer['bounds'][0]
-	right_margin = parent['width'] - layer['bounds'][2]
-	if left_margin < 5 and right_margin < 5:
+
+	# layout_marginTop
+	if pre_layer:
+		margin_top = layer['bounds'][1] - pre_layer['bounds'][3]
+	else:
+		margin_top = 0
+	if margin_top != 0:
+		info['layout_marginTop'] = str(margin_top) + 'dp'
+
+	# layout_width, layout_gravity
+	margin_left = layer['bounds'][0]
+	margin_right = parent['width'] - layer['bounds'][2]
+	if margin_left < 5 and margin_right < 5:
 		info['layout_width'] = 'match_parent'
 		info['scaleType'] = 'fitXY'
 	else:
 		info['layout_width'] = 'wrap_content'
-		if abs(left_margin - right_margin) < 5:
+		if abs(margin_left - margin_right) < 5:
 			info['layout_gravity'] = 'center_horizontal'
 	template = env.get_template('ImageView.xml')
 	view = template.render(info=info)
 	return view 
 
+def sort_layers(layers):
+	layers.sort(key = lambda l:l['bounds'][1])
+
 def layerset2layout(layer_set, is_root=False):
+	layers = layer_set['layers']
+	sort_layers(layers)
 	child_views = []
-	for layer in layer_set['layers']:
-		view = layer2view(layer_set, layer)
+	for i in range(len(layers)):
+		layer = layers[i]
+		if i > 0:
+			pre_layer = layers[i-1]
+		else:
+			pre_layer = None
+		view = layer2view(layer_set, layer, pre_layer)
 		child_views.append(view)
 	child_views = ''.join(child_views)
 
-	layer_set['layout_type'] = 'LinearLayout'
-	layer_set['orientation'] = 'vertical'
-	layer_set['is_root'] = is_root
-	layer_set['child_views'] = child_views
-	template = env.get_template('LinearLayout.xml')
-	layout = template.render(layer_set=layer_set)
+	info = {'child_views': child_views}
+	template = env.get_template('ScrollView.xml')
+	layout = template.render(info=info)
 	return layout
 
 if __name__ == '__main__':

@@ -1,6 +1,11 @@
-<{{ layer_set.layout_type }} {% if layer_set.is_root %} xmlns:android="http://schemas.android.com/apk/res/android" {% endif %}
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" 
 	android:layout_width="match_parent"
-	android:layout_height="match_parent"
-	android:orientation="vertical">
-	{{ layer_set.child_views }}
-</LinearLayout>
+	android:layout_height="match_parent" >
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:gravity="center_horizontal"
+		android:orientation="vertical" >
+		{{ info.child_views }}
+	</LinearLayout>
+</ScrollView>
