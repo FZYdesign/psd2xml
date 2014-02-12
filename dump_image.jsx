@@ -5,7 +5,7 @@ function saveLayerImage(doc, layer, prefix) {
 	try {
 		_saveLayerImage(doc, layer, prefix);
 	} catch (e) {
-		alert(e.description);
+		alert('saveLayerImage: ' + layer + '\n' + e.description);
 	}
 }
 
@@ -60,7 +60,8 @@ function test(i) {
 function main() {
 	init();
 	var doc = app.activeDocument;
-	dumpImages(doc, doc, doc.name.replace('.psd', ''), 0);
+	dumpDoc(saveLayerImage, doc);
+	//dumpImages(doc, doc, doc.name.replace('.psd', ''), 0);
 	//test(0);
 }
 
