@@ -22,15 +22,16 @@ function dumpDoc(func, doc) {
 function dumpLayerSet(func, doc, layerSet, prefix, deep) {
 	if (!layerSet.visible)
 		return;
-	if (deep == 2) {
-		dumpArtLayer(func, doc, layerSet.merge(), prefix);
-	} else {
-		prefix = [prefix, layerSet.name].join('_');
-		for (var i=0; i<layerSet.artLayers.length; i++)
-			dumpArtLayer(func, doc, layerSet.artLayers[i], prefix);
-		for (var i=0; i<layerSet.layerSets.length; i++)
-			dumpLayerSet(func, doc, layerSet.layerSets[i], prefix, deep + 1);
+	if (deep == 1) {
+		var len = layerSet.layerSets.length;
+		for (var i=0; i<len; i++)
+			layerSet.layerSets[0].merge();
 	}
+	prefix = [prefix, layerSet.name].join('_');
+	for (var i=0; i<layerSet.artLayers.length; i++)
+		dumpArtLayer(func, doc, layerSet.artLayers[i], prefix);
+	for (var i=0; i<layerSet.layerSets.length; i++)
+		dumpLayerSet(func, doc, layerSet.layerSets[i], prefix, deep + 1);
 }
 
 function dumpArtLayer(func, doc, artLayer, prefix) {
