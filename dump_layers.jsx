@@ -6,8 +6,10 @@ function getLayerInfo(doc, layer, prefix) {
 	bounds = [];
 	for (var i=0; i<layer.bounds.length; i++)
 		bounds.push(layer.bounds[i].value);
+	filename = [prefix, layer.name].join('_');
+	filename = filterName(filename)
 	info = {
-		name : prefix,
+		name : filename,
 		bounds : bounds,
 		kind : layer.kind
 	}

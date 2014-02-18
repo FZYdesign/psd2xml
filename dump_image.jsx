@@ -12,7 +12,8 @@ function saveLayerImage(doc, layer, prefix) {
 function _saveLayerImage(doc, layer, prefix) {
 	layer.copy();
 
-	filename = prefix;
+	filename = [prefix, layer.name].join('_');
+	filename = filterName(filename)
 	var tmpDoc = app.documents.add(layer.width, layer.height, 72, filename, NewDocumentMode.RGB);
 	app.activeDocument = tmpDoc;
 	tmpDoc.paste();

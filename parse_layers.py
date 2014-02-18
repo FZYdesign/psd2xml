@@ -21,7 +21,15 @@ def init_env():
 def bound2num(bound):
 	return int(bound.replace('pt', '').strip());
 
-def layer2view(parent, layer, pre_layer):
+def layer2view(parent_bounds, layer, pre_layer):
+	layer_width = layer['bounds'][2] - layer['bounds'][0]
+	layer_height = layer['bounds'][3] - layer['bounds'][1]
+	parent_width = parent_bounds[2] - parent_bounds[0]
+	parent_height = parent_bounds[3] - parent_bounds[1]
+
+	if parent_width - layer_width < 10 and parent_height - layer_height < 10:
+		return ''
+
 	info = {
 			'name': layer['name'],
 			'src': '@drawable/' + layer['name'],
@@ -73,7 +81,8 @@ def layer_group_to_layout(group):
 			pre_layer = group[i-1]
 		else:
 			pre_layer = None
-		view = layer2view(group, layer, pre_layer)
+
+		view = layer2view(group_bounds, layer, pre_layer)
 		child_views.append(view)
 	child_views = ''.join(child_views)
 
@@ -104,7 +113,7 @@ def get_layer_groups(layers_infos):
 	groups = []
 	group = [_layers_infos[0]]
 	for i in range(1, len(_layers_infos)):
-		if _layers_infos[i]['start'] < _layers_infos[i-1]['end']:
+		if _layers_infos[i]['start'] < _layers_infos[i-1]['end'] - 5:
 			group.append(_layers_infos[i])
 		else:
 			groups.append(group)
@@ -117,6 +126,15 @@ def get_layer_groups(layers_infos):
 if __name__ == '__main__':
 	s = open('out/layers.txt').read().decode('gbk')
 	doc = json.loads(s)
+	for layer in doc['layersInfo']:
+		if layer['bounds'][0] < 0:
+			layer['bounds'][1] = 0
+		if layer['bounds'][1] < 0:
+			layer['bounds'][1] = 0
+		if layer['bounds'][2] > doc['width']:
+			layer['bounds'][2] = doc['width']
+		if layer['bounds'][3] > doc['height']:
+			layer['bounds'][3] = doc['height']
 
 	# render xml
 	env = init_env()

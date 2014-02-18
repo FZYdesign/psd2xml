@@ -6,9 +6,8 @@ function init() {
 	app.preferences.rulerUnits = Units.POINTS;
 }
 
-function getLayerName(doc, layer) {
-	var layer_name = doc.name.replace(".psd", "") + "_" + layer.name.replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_");
-	return layer_name;
+function filterName(name) {
+	return name.replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_");
 }
 
 function dumpDoc(func, doc) {
