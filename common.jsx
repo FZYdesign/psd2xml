@@ -14,10 +14,10 @@ function getLayerName(doc, layer) {
 function dumpDoc(func, doc) {
 	prefix = doc.name.replace('.psd', '');
 	for (var i=0; i<doc.artLayers.length; i++) {
-		dumpArtLayer(func, doc, doc.artLayers[i], prefix + '_artLayer' + i);
+		dumpArtLayer(func, doc, doc.artLayers[i], prefix + '_artlayer' + i);
 	}
 	for (var i=0; i<doc.layerSets.length; i++) {
-		dumpLayerSet(func, doc, doc.layerSets[i], prefix + '_layerSet' + i, 1);
+		dumpLayerSet(func, doc, doc.layerSets[i], prefix + '_layerset' + i, 1);
 	}
 }
 
@@ -30,10 +30,10 @@ function dumpLayerSet(func, doc, layerSet, prefix, deep) {
 			layerSet.layerSets[0].merge();
 	}
 	for (var i=0; i<layerSet.artLayers.length; i++) {
-		dumpArtLayer(func, doc, layerSet.artLayers[i], prefix + '_artLayer' + i);
+		dumpArtLayer(func, doc, layerSet.artLayers[i], prefix + '_artlayer' + i);
 	}
 	for (var i=0; i<layerSet.layerSets.length; i++) {
-		dumpLayerSet(func, doc, layerSet.layerSets[i], prefix + '_layerSet' + i, deep + 1);
+		dumpLayerSet(func, doc, layerSet.layerSets[i], prefix + '_layerset' + i, deep + 1);
 	}
 }
 
