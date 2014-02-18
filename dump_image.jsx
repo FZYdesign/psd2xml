@@ -12,7 +12,7 @@ function saveLayerImage(doc, layer, prefix) {
 function _saveLayerImage(doc, layer, prefix) {
 	layer.copy();
 
-	filename = [prefix, layer.name].join('_').replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_");
+	filename = prefix;
 	var tmpDoc = app.documents.add(layer.width, layer.height, 72, filename, NewDocumentMode.RGB);
 	app.activeDocument = tmpDoc;
 	tmpDoc.paste();
@@ -56,7 +56,7 @@ function toSmartObj(doc, layer, prefix) {
 function main() {
 	init();
 	var doc = app.activeDocument;
-	dumpDoc(toSmartObj, doc);
+	//dumpDoc(toSmartObj, doc);
 	dumpDoc(saveLayerImage, doc);
 }
 
