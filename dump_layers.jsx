@@ -7,7 +7,7 @@ function getLayerInfo(doc, layer, prefix) {
 	for (var i=0; i<layer.bounds.length; i++)
 		bounds.push(layer.bounds[i].value);
 	info = {
-		name : layer.name,
+		name : prefix,
 		bounds : bounds,
 		kind : layer.kind
 	}
@@ -19,9 +19,14 @@ function main() {
 	var doc = app.activeDocument;
 	dumpDoc(getLayerInfo, doc);
 
+	docInfo = {}
+	docInfo.width = doc.width.value;
+	docInfo.height = doc.height.value;
+	docInfo.layersInfo = layersInfo;
+
 	var file = File(proj_root + "out/layers.txt");
 	file.open("e", "TEXT", "????");
-	file.writeln(JSON.stringify(layersInfo));
+	file.writeln(JSON.stringify(docInfo));
 	file.close();
 
 	alert("OK");
