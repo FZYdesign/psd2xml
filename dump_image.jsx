@@ -48,9 +48,15 @@ function test(i) {
 	saveLayerImage(doc, layers[i], 0);
 }
 
+function toSmartObj(doc, layer, prefix) {
+	doc.activeLayer = layer;
+	executeAction(app.stringIDToTypeID('newPlacedLayer'), undefined, DialogModes.NO);
+}
+
 function main() {
 	init();
 	var doc = app.activeDocument;
+	dumpDoc(toSmartObj, doc);
 	dumpDoc(saveLayerImage, doc);
 }
 
