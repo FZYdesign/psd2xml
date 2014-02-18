@@ -5,6 +5,7 @@ import re
 import pprint
 from jinja2 import Environment, PackageLoader, FileSystemLoader, ChoiceLoader
 import json
+import md5
 sys.path += ['..']
 
 def init_env():
@@ -25,25 +26,6 @@ def layer2view(parent, layer, pre_layer):
 			'name': layer['name'],
 			'src': '@drawable/' + layer['name'],
 			}
-
-	# layout_marginTop
-	if pre_layer:
-		margin_top = layer['bounds'][1] - pre_layer['bounds'][3]
-	else:
-		margin_top = 0
-	if margin_top != 0:
-		info['layout_marginTop'] = str(margin_top) + 'dp'
-
-	# layout_width, layout_gravity
-	margin_left = layer['bounds'][0]
-	margin_right = parent['width'] - layer['bounds'][2]
-	if margin_left < 5 and margin_right < 5:
-		info['layout_width'] = 'match_parent'
-		info['scaleType'] = 'fitXY'
-	else:
-		info['layout_width'] = 'wrap_content'
-		if abs(margin_left - margin_right) < 5:
-			info['layout_gravity'] = 'center_horizontal'
 	template = env.get_template('ImageView.xml')
 	view = template.render(info=info)
 	return view 
@@ -70,13 +52,77 @@ def layerset2layout(layer_set, is_root=False):
 	layout = template.render(info=info)
 	return layout
 
+def layer_group_to_layout(group):
+	group_bounds = [sys.maxint, sys.maxint, 0, 0]
+	for layer in group:
+		layer['start'] = layer['bounds'][0]
+		layer['end'] = layer['bounds'][2]
+		if layer['bounds'][0] < group_bounds[0]:
+			group_bounds[0] = layer['bounds'][0]
+		if layer['bounds'][1] < group_bounds[1]:
+			group_bounds[1] = layer['bounds'][1]
+		if layer['bounds'][2] > group_bounds[2]:
+			group_bounds[2] = layer['bounds'][2]
+		if layer['bounds'][3] > group_bounds[3]:
+			group_bounds[3] = layer['bounds'][3]
+	group.sort(key = lambda x:x['start'])
+	child_views = []
+	for i in range(len(group)):
+		layer = group[i]
+		if i > 0:
+			pre_layer = group[i-1]
+		else:
+			pre_layer = None
+		view = layer2view(group, layer, pre_layer)
+		child_views.append(view)
+	child_views = ''.join(child_views)
+
+	info = {'child_views': child_views}
+	template = env.get_template('LinearLayout.xml')
+	layout = template.render(info=info)
+	return layout
+
+
+def layer_groups_to_layout(groups):
+	child_layouts = []
+	for group in groups:
+		layout = layer_group_to_layout(group)
+		child_layouts.append(layout)
+	child_layouts = ''.join(child_layouts)
+	
+	info = {'childs': child_layouts}
+	template = env.get_template('ScrollView.xml')
+	layout = template.render(info=info)
+	return layout
+
+def get_layer_groups(layers_infos):
+	_layers_infos = layers_infos[:]
+	for layer_info in _layers_infos:
+		layer_info['start'] = layer_info['bounds'][1]
+		layer_info['end'] = layer_info['bounds'][3]
+	_layers_infos.sort(key = lambda x:x['start'])
+	groups = []
+	group = [_layers_infos[0]]
+	for i in range(1, len(_layers_infos)):
+		if _layers_infos[i]['start'] < _layers_infos[i-1]['end']:
+			group.append(_layers_infos[i])
+		else:
+			groups.append(group)
+			group = [_layers_infos[i]]
+	else:
+		groups.append(group)
+
+	return 'horizontal', groups
+
 if __name__ == '__main__':
-	s = open('out/layers.txt').read()
+	s = open('out/layers.txt').read().decode('gbk')
 	doc = json.loads(s)
 
 	# render xml
 	env = init_env()
 
-	root_layout = layerset2layout(doc, True)
+	orientation, groups = get_layer_groups(doc['layersInfo'])
+	
+	root_layout = layer_groups_to_layout(groups)
 	print root_layout
 
