@@ -21,62 +21,47 @@ def init_env():
 def bound2num(bound):
 	return int(bound.replace('pt', '').strip());
 
-def layer2view(parent_bounds, layer, pre_layer):
+def layer2view(parent_bounds, layer, pre_layer=None):
 	layer_width = layer['bounds'][2] - layer['bounds'][0]
 	layer_height = layer['bounds'][3] - layer['bounds'][1]
 	parent_width = parent_bounds[2] - parent_bounds[0]
 	parent_height = parent_bounds[3] - parent_bounds[1]
 
-	if parent_width - layer_width < 10 and parent_height - layer_height < 10:
-		return ''
+	comment = ['layer_bounds: ' + str(layer['bounds']), 'parent_bounds: ' + str(parent_bounds)]
 
 	info = {
 			'name': layer['name'],
-			'src': '@drawable/' + layer['name'],
+			'layout_width': 'wrap_content',
 			}
+
+	if parent_width -layer_width < parent_width / 10:
+		info['layout_width'] = 'match_parent'
+		info['background'] = '@drawable/' + layer['name']
+	else:
+		info['src'] = '@drawable/' + layer['name']
 	template = env.get_template('ImageView.xml')
-	view = template.render(info=info)
+	view = template.render(info=info, comment=comment)
 	return view 
 
-def sort_layers(layers):
-	layers.sort(key = lambda l:l['bounds'][1])
-
-def layerset2layout(layer_set, is_root=False):
-	layers = layer_set['layers']
-	sort_layers(layers)
-	child_views = []
-	for i in range(len(layers)):
-		layer = layers[i]
-		if i > 0:
-			pre_layer = layers[i-1]
-		else:
-			pre_layer = None
-		view = layer2view(layer_set, layer, pre_layer)
-		child_views.append(view)
-	child_views = ''.join(child_views)
-
-	info = {'child_views': child_views}
-	template = env.get_template('ScrollView.xml')
-	layout = template.render(info=info)
-	return layout
-
 def layer_group_to_layout(group):
-	group_bounds = [sys.maxint, sys.maxint, 0, 0]
-	for layer in group:
-		layer['start'] = layer['bounds'][0]
-		layer['end'] = layer['bounds'][2]
-		if layer['bounds'][0] < group_bounds[0]:
-			group_bounds[0] = layer['bounds'][0]
-		if layer['bounds'][1] < group_bounds[1]:
-			group_bounds[1] = layer['bounds'][1]
-		if layer['bounds'][2] > group_bounds[2]:
-			group_bounds[2] = layer['bounds'][2]
-		if layer['bounds'][3] > group_bounds[3]:
-			group_bounds[3] = layer['bounds'][3]
-	group.sort(key = lambda x:x['start'])
+	group_bounds = get_group_bounds(group)
+	group.sort(key = lambda x:x['bounds'][0])
+
+	info = {}
 	child_views = []
 	for i in range(len(group)):
 		layer = group[i]
+		# set background
+		layer_width = layer['bounds'][2] - layer['bounds'][0]
+		layer_height = layer['bounds'][3] - layer['bounds'][1]
+		parent_width = group_bounds[2] - group_bounds[0]
+		parent_height = group_bounds[3] - group_bounds[1]
+
+		if layer_width > parent_width * 0.9 and layer_height > parent_height * 0.9:
+			info['background'] = '@drawable/' + layer['name']
+			continue
+
+		# set pre_layer
 		if i > 0:
 			pre_layer = group[i-1]
 		else:
@@ -86,25 +71,40 @@ def layer_group_to_layout(group):
 		child_views.append(view)
 	child_views = ''.join(child_views)
 
-	info = {'child_views': child_views}
 	template = env.get_template('LinearLayout.xml')
-	layout = template.render(info=info)
+	layout = template.render(info=info, child_views=child_views)
 	return layout
 
-
-def layer_groups_to_layout(groups):
-	child_layouts = []
-	for group in groups:
-		layout = layer_group_to_layout(group)
-		child_layouts.append(layout)
-	child_layouts = ''.join(child_layouts)
+def group2layout(group):
+	childs = divide_group(group)
+	child_views = []
+	for child in childs:
+		if len(child) > 1:
+			child_view = layer_group_to_layout(child)
+		elif len(child) == 1:
+			child_view = layer2view(get_group_bounds(group), child[0])
+		child_views.append(child_view)
+	child_views = ''.join(child_views)
 	
-	info = {'childs': child_layouts}
+	info = { 'childs': child_views }
 	template = env.get_template('ScrollView.xml')
 	layout = template.render(info=info)
 	return layout
 
-def get_layer_groups(layers_infos):
+def get_group_bounds(group):
+	bounds = [sys.maxint, sys.maxint, 0, 0]
+	for layer in group:
+		if layer['bounds'][0] < bounds[0]:
+			bounds[0] = layer['bounds'][0]
+		if layer['bounds'][1] < bounds[1]:
+			bounds[1] = layer['bounds'][1]
+		if layer['bounds'][2] > bounds[2]:
+			bounds[2] = layer['bounds'][2]
+		if layer['bounds'][3] > bounds[3]:
+			bounds[3] = layer['bounds'][3]
+	return bounds
+
+def divide_group(layers_infos):
 	_layers_infos = layers_infos[:]
 	for layer_info in _layers_infos:
 		layer_info['start'] = layer_info['bounds'][1]
@@ -112,20 +112,29 @@ def get_layer_groups(layers_infos):
 	_layers_infos.sort(key = lambda x:x['start'])
 	groups = []
 	group = [_layers_infos[0]]
+	group_start = _layers_infos[0]['start']
+	group_end = _layers_infos[0]['end']
 	for i in range(1, len(_layers_infos)):
-		if _layers_infos[i]['start'] < _layers_infos[i-1]['end'] - 5:
+		if _layers_infos[i]['start'] < group_end - 5:
 			group.append(_layers_infos[i])
+			if _layers_infos[i]['end'] > group_end :
+				group_end = _layers_infos[i]['end']
+			else:
+				group_end
 		else:
 			groups.append(group)
 			group = [_layers_infos[i]]
+			group_start = _layers_infos[i]['start']
+			group_end = _layers_infos[i]['end']
 	else:
 		groups.append(group)
 
-	return 'horizontal', groups
+	return groups
 
 if __name__ == '__main__':
 	s = open('out/layers.txt').read().decode('gbk')
 	doc = json.loads(s)
+	doc['bounds'] = [0, 0, doc['width'], doc['height']]
 	for layer in doc['layersInfo']:
 		if layer['bounds'][0] < 0:
 			layer['bounds'][1] = 0
@@ -139,8 +148,11 @@ if __name__ == '__main__':
 	# render xml
 	env = init_env()
 
-	orientation, groups = get_layer_groups(doc['layersInfo'])
-	
-	root_layout = layer_groups_to_layout(groups)
+	root_layout = group2layout(doc['layersInfo'])
+	print root_layout
+	exit()
+
+	childs = divide_group(doc['layersInfo'])
+	root_layout = layer_groups_to_layout(doc['bounds'], childs)
 	print root_layout
 

@@ -1,6 +1,9 @@
 <LinearLayout
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
-	android:orientation="horizontal" >
-	{{ info.child_views }}
+	android:padding="10dp"
+	android:orientation="vertical" 
+	{% for k, v in info.iteritems() %}android:{{ k }}="{{ v }}"
+	{% endfor %} >
+	{{ child_views }}
 </LinearLayout>
