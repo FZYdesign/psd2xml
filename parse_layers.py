@@ -59,9 +59,21 @@ def check_background(layer_bounds, group_bounds):
 
 
 def group2layout(group, layout_type='LinearLayout'):
+	attr = {}
+	group_bounds = get_group_bounds(group)
+
+	# pick out background layer
+	background_layer = None
+	for layer in group:
+		if check_background(layer['bounds'], group_bounds):
+			background_layer = layer
+			group.remove(layer)
+	if background_layer:
+		attr['background'] = '@drawable/' + background_layer['name']
+
 	childs, orientation = divide_group(group)
+
 	child_views = []
-	attr = { 'orientation': orientation }
 	for child in childs:
 		if type(child) == list:
 			child_view = group2layout(child)
@@ -73,6 +85,7 @@ def group2layout(group, layout_type='LinearLayout'):
 				child_view = layer2view(get_group_bounds(group), child, orientation)
 				child_views.append(child_view)
 	child_views = ''.join(child_views)
+	attr['orientation'] = orientation
 
 	template = env.get_template(layout_type + '.xml')
 	layout = template.render(childs=child_views, attr=attr)
@@ -123,13 +136,6 @@ def divide_group(group):
 	return childs, orientation
 
 def _divide_group(_group):
-	# pick out background layer
-	background_layer = None
-	for layer in _group:
-		if check_background(layer['bounds'], get_group_bounds(_group)):
-			background_layer = layer
-			_group.remove(layer)
-
 	# divide group into child groups
 	childs = []
 	child = [_group[0]]
