@@ -31,8 +31,6 @@ def layer2view(parent_bounds, layer, pre_layer=None):
 	parent_width = parent_bounds[2] - parent_bounds[0]
 	parent_height = parent_bounds[3] - parent_bounds[1]
 
-	comment = ['layer_bounds: ' + str(layer['bounds']), 'parent_bounds: ' + str(parent_bounds)]
-
 	info = {
 		'name': layer['name'],
 		'layout_width': 'wrap_content',
@@ -44,7 +42,7 @@ def layer2view(parent_bounds, layer, pre_layer=None):
 	else:
 		info['src'] = '@drawable/' + layer['name']
 	template = env.get_template('ImageView.xml')
-	view = template.render(info=info, comment=comment)
+	view = template.render(info=info)
 	return view
 
 
@@ -133,16 +131,25 @@ def divide_group(group):
 		layer['end'] = layer['bounds'][3]
 	_group.sort(key=lambda x: x['start'])
 
+	# pick out background layer
+	background_layer = None
+	for layer in _group:
+		if check_background(layer['bounds'], get_group_bounds(group)):
+			background_layer = layer
+			_group.remove(layer)
+
+	# divide group into child groups
 	childs = []
 	child = [_group[0]]
 	child_start = _group[0]['start']
 	child_end = _group[0]['end']
-
 	for layer in _group[1:]:
+		# continue the child group
 		if layer['start'] < child_end - 5:
 			child.append(layer)
 			if layer['end'] > child_end:
 				child_end = layer['end']
+		# complete one child group and start a new one
 		else:
 			if len(child) > 1:
 				childs.append(child)
