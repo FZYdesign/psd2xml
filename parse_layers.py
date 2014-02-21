@@ -21,11 +21,7 @@ def init_env():
 	return env
 
 
-def bound2num(bound):
-	return int(bound.replace('pt', '').strip());
-
-
-def layer2view(parent_bounds, layer, pre_layer=None):
+def layer2view(parent_bounds, layer, orientation, pre_layer=None):
 	layer_width = layer['bounds'][2] - layer['bounds'][0]
 	layer_height = layer['bounds'][3] - layer['bounds'][1]
 	parent_width = parent_bounds[2] - parent_bounds[0]
@@ -43,40 +39,13 @@ def layer2view(parent_bounds, layer, pre_layer=None):
 		info['src'] = '@drawable/' + layer['name']
 	template = env.get_template('ImageView.xml')
 	view = template.render(info=info)
+
+	if (orientation == 'horizontal' and layer['bounds'][2] + 5 > parent_bounds[2]) or \
+			(orientation == 'vertical' and layer['bounds'][3] + 5 > parent_bounds[3]):
+		template = env.get_template('Space.xml')
+		view = template.render() + view
+
 	return view
-
-
-def layer_group_to_layout(group):
-	group_bounds = get_group_bounds(group)
-	group.sort(key=lambda x: x['bounds'][0])
-
-	info = {}
-	child_views = []
-	for i in range(len(group)):
-		layer = group[i]
-		# set background
-		layer_width = layer['bounds'][2] - layer['bounds'][0]
-		layer_height = layer['bounds'][3] - layer['bounds'][1]
-		parent_width = group_bounds[2] - group_bounds[0]
-		parent_height = group_bounds[3] - group_bounds[1]
-
-		if layer_width > parent_width * 0.9 and layer_height > parent_height * 0.9:
-			info['background'] = '@drawable/' + layer['name']
-			continue
-
-		# set pre_layer
-		if i > 0:
-			pre_layer = group[i - 1]
-		else:
-			pre_layer = None
-
-		view = layer2view(group_bounds, layer, pre_layer)
-		child_views.append(view)
-	child_views = ''.join(child_views)
-
-	template = env.get_template('LinearLayout.xml')
-	layout = template.render(info=info, child_views=child_views)
-	return layout
 
 
 def check_background(layer_bounds, group_bounds):
@@ -101,7 +70,7 @@ def group2layout(group, layout_type='LinearLayout'):
 			if check_background(child['bounds'], get_group_bounds(group)):
 				attr['background'] = '@drawable/' + child['name']
 			else:
-				child_view = layer2view(get_group_bounds(group), child)
+				child_view = layer2view(get_group_bounds(group), child, orientation)
 				child_views.append(child_view)
 	child_views = ''.join(child_views)
 
