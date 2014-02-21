@@ -90,9 +90,9 @@ def check_background(layer_bounds, group_bounds):
 
 
 def group2layout(group, layout_type='LinearLayout'):
-	childs = divide_group(group)
+	childs, orientation = divide_group(group)
 	child_views = []
-	attr = {}
+	attr = { 'orientation': orientation }
 	for child in childs:
 		if type(child) == list:
 			child_view = group2layout(child)
@@ -125,16 +125,39 @@ def get_group_bounds(group):
 
 
 def divide_group(group):
+	# horizontal divide
+	_group = group[:]
+	for layer in _group:
+		layer['start'] = layer['bounds'][0]
+		layer['end'] = layer['bounds'][2]
+	_group.sort(key=lambda x: x['start'])
+	h_childs = _divide_group(_group)
+
+	# vertical divide
 	_group = group[:]
 	for layer in _group:
 		layer['start'] = layer['bounds'][1]
 		layer['end'] = layer['bounds'][3]
 	_group.sort(key=lambda x: x['start'])
+	v_childs = _divide_group(_group)
 
+	if len(h_childs) > len(v_childs):
+		childs = h_childs
+		orientation = 'horizontal'
+	else:
+		childs = v_childs
+		orientation = 'vertical'
+
+	if len(childs) == 1:
+		childs = childs[0]
+
+	return childs, orientation
+
+def _divide_group(_group):
 	# pick out background layer
 	background_layer = None
 	for layer in _group:
-		if check_background(layer['bounds'], get_group_bounds(group)):
+		if check_background(layer['bounds'], get_group_bounds(_group)):
 			background_layer = layer
 			_group.remove(layer)
 
@@ -164,9 +187,6 @@ def divide_group(group):
 		elif len(child) == 1:
 			childs.append(child[0])
 
-	if len(childs) == 1:
-		childs = childs[0]
-
 	return childs
 
 
@@ -188,11 +208,6 @@ def main():
 	root_layout = group2layout(doc['layersInfo'], 'ScrollView')
 	print root_layout
 	exit()
-
-	childs = divide_group(doc['layersInfo'])
-	root_layout = layer_groups_to_layout(doc['bounds'], childs)
-	print root_layout
-
 
 if __name__ == '__main__':
 	env = init_env()
