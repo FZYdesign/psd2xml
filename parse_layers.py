@@ -6,7 +6,9 @@ import pprint
 from jinja2 import Environment, PackageLoader, FileSystemLoader, ChoiceLoader
 import json
 import md5
+
 sys.path += ['..']
+
 
 def init_env():
 	# used to load the template in directory 'templates'
@@ -14,12 +16,14 @@ def init_env():
 
 	# used to load the template in the current directory running the script
 	file_system_loader = FileSystemLoader('.')
-	
+
 	env = Environment(loader=ChoiceLoader([file_system_loader, package_loader]))
 	return env
 
+
 def bound2num(bound):
 	return int(bound.replace('pt', '').strip());
+
 
 def layer2view(parent_bounds, layer, pre_layer=None):
 	layer_width = layer['bounds'][2] - layer['bounds'][0]
@@ -30,22 +34,23 @@ def layer2view(parent_bounds, layer, pre_layer=None):
 	comment = ['layer_bounds: ' + str(layer['bounds']), 'parent_bounds: ' + str(parent_bounds)]
 
 	info = {
-			'name': layer['name'],
-			'layout_width': 'wrap_content',
-			}
+		'name': layer['name'],
+		'layout_width': 'wrap_content',
+	}
 
-	if parent_width -layer_width < parent_width / 10:
+	if parent_width - layer_width < parent_width / 10:
 		info['layout_width'] = 'match_parent'
 		info['background'] = '@drawable/' + layer['name']
 	else:
 		info['src'] = '@drawable/' + layer['name']
 	template = env.get_template('ImageView.xml')
 	view = template.render(info=info, comment=comment)
-	return view 
+	return view
+
 
 def layer_group_to_layout(group):
 	group_bounds = get_group_bounds(group)
-	group.sort(key = lambda x:x['bounds'][0])
+	group.sort(key=lambda x: x['bounds'][0])
 
 	info = {}
 	child_views = []
@@ -63,7 +68,7 @@ def layer_group_to_layout(group):
 
 		# set pre_layer
 		if i > 0:
-			pre_layer = group[i-1]
+			pre_layer = group[i - 1]
 		else:
 			pre_layer = None
 
@@ -75,6 +80,7 @@ def layer_group_to_layout(group):
 	layout = template.render(info=info, child_views=child_views)
 	return layout
 
+
 def check_background(layer_bounds, group_bounds):
 	layer_width = layer_bounds[2] - layer_bounds[0]
 	layer_height = layer_bounds[3] - layer_bounds[1]
@@ -83,6 +89,7 @@ def check_background(layer_bounds, group_bounds):
 
 	if layer_width > group_width * 0.9 and layer_height > group_height * 0.9:
 		return True
+
 
 def group2layout(group, layout_type='LinearLayout'):
 	childs = divide_group(group)
@@ -99,10 +106,11 @@ def group2layout(group, layout_type='LinearLayout'):
 				child_view = layer2view(get_group_bounds(group), child)
 				child_views.append(child_view)
 	child_views = ''.join(child_views)
-	
+
 	template = env.get_template(layout_type + '.xml')
 	layout = template.render(childs=child_views, attr=attr)
 	return layout
+
 
 def get_group_bounds(group):
 	bounds = [sys.maxint, sys.maxint, 0, 0]
@@ -117,42 +125,43 @@ def get_group_bounds(group):
 			bounds[3] = layer['bounds'][3]
 	return bounds
 
-def divide_group(layers_infos):
-	_layers_infos = layers_infos[:]
-	for layer_info in _layers_infos:
-		layer_info['start'] = layer_info['bounds'][1]
-		layer_info['end'] = layer_info['bounds'][3]
-	_layers_infos.sort(key = lambda x:x['start'])
 
-	groups = []
-	group = [_layers_infos[0]]
-	group_start = _layers_infos[0]['start']
-	group_end = _layers_infos[0]['end']
-	for i in range(1, len(_layers_infos)):
-		if _layers_infos[i]['start'] < group_end - 5:
-			group.append(_layers_infos[i])
-			if _layers_infos[i]['end'] > group_end :
-				group_end = _layers_infos[i]['end']
-			else:
-				group_end
+def divide_group(group):
+	_group = group[:]
+	for layer in _group:
+		layer['start'] = layer['bounds'][1]
+		layer['end'] = layer['bounds'][3]
+	_group.sort(key=lambda x: x['start'])
+
+	childs = []
+	child = [_group[0]]
+	child_start = _group[0]['start']
+	child_end = _group[0]['end']
+
+	for layer in _group[1:]:
+		if layer['start'] < child_end - 5:
+			child.append(layer)
+			if layer['end'] > child_end:
+				child_end = layer['end']
 		else:
-			if len(group) > 1:
-				groups.append(group)
-			elif len(group) == 1:
-				groups.append(group[0])
-			group = [_layers_infos[i]]
-			group_start = _layers_infos[i]['start']
-			group_end = _layers_infos[i]['end']
+			if len(child) > 1:
+				childs.append(child)
+			elif len(child) == 1:
+				childs.append(child[0])
+			child = [layer]
+			child_start = layer['start']
+			child_end = layer['end']
 	else:
-		if len(group) > 1:
-			groups.append(group)
-		elif len(group) == 1:
-			groups.append(group[0])
-	
-	if len(groups) == 1:
-		groups = groups[0]
+		if len(child) > 1:
+			childs.append(child)
+		elif len(child) == 1:
+			childs.append(child[0])
 
-	return groups
+	if len(childs) == 1:
+		childs = childs[0]
+
+	return childs
+
 
 def main():
 	s = open('out/layers.txt').read().decode('gbk')
@@ -176,6 +185,7 @@ def main():
 	childs = divide_group(doc['layersInfo'])
 	root_layout = layer_groups_to_layout(doc['bounds'], childs)
 	print root_layout
+
 
 if __name__ == '__main__':
 	env = init_env()
