@@ -112,7 +112,7 @@ def divide_group(group):
 	for layer in _group:
 		layer['start'] = layer['bounds'][0]
 		layer['end'] = layer['bounds'][2]
-	_group.sort(key=lambda x: x['start'])
+	_group.sort(cmp=cmp_layer)
 	h_childs = _divide_group(_group)
 
 	# vertical divide
@@ -120,7 +120,7 @@ def divide_group(group):
 	for layer in _group:
 		layer['start'] = layer['bounds'][1]
 		layer['end'] = layer['bounds'][3]
-	_group.sort(key=lambda x: x['start'])
+	_group.sort(cmp=cmp_layer)
 	v_childs = _divide_group(_group)
 
 	if len(h_childs) > len(v_childs):
@@ -134,6 +134,12 @@ def divide_group(group):
 		childs = childs[0]
 
 	return childs, orientation
+
+def cmp_layer(a, b):
+	if a['start'] != b['start']:
+		return a['start'] - b['start']
+	else:
+		return a['end'] - b['end']
 
 def _divide_group(_group):
 	# divide group into child groups
