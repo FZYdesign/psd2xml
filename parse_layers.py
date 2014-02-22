@@ -79,11 +79,8 @@ def group2layout(group, layout_type='LinearLayout'):
 			child_view = group2layout(child)
 			child_views.append(child_view)
 		elif type(child) == dict:
-			if check_background(child['bounds'], get_group_bounds(group)):
-				attr['background'] = '@drawable/' + child['name']
-			else:
-				child_view = layer2view(get_group_bounds(group), child, orientation)
-				child_views.append(child_view)
+			child_view = layer2view(get_group_bounds(group), child, orientation)
+			child_views.append(child_view)
 	child_views = ''.join(child_views)
 	attr['orientation'] = orientation
 
@@ -130,7 +127,7 @@ def divide_group(group):
 		childs = v_childs
 		orientation = 'vertical'
 
-	if len(childs) == 1:
+	if len(childs) == 1 and isinstance(childs[0], list):
 		childs = childs[0]
 
 	return childs, orientation
