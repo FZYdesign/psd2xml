@@ -73,6 +73,10 @@ def group2layout(group, layout_type='LinearLayout'):
 
 	childs, orientation = divide_group(group)
 
+	if len(childs) == 1 and isinstance(childs[0], list):
+		layout_type = 'RelativeLayout'
+		childs = childs[0]
+
 	child_views = []
 	for child in childs:
 		if type(child) == list:
@@ -126,9 +130,6 @@ def divide_group(group):
 	else:
 		childs = v_childs
 		orientation = 'vertical'
-
-	if len(childs) == 1 and isinstance(childs[0], list):
-		childs = childs[0]
 
 	return childs, orientation
 

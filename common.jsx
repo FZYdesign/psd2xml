@@ -1,5 +1,5 @@
 
-proj_root = "/Users/linyun/Documents/ws-test/psd2xml/";
+proj_root = "/Users/linyun/Documents/psd2xml/";
 
 function init() {
 	app.preferences.typeUnits = TypeUnits.POINTS;
@@ -7,7 +7,7 @@ function init() {
 }
 
 function filterName(name) {
-	return name.replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_");
+	return name.replace(new RegExp("[^_a-zA-Z0-9]", "g"), "_").toLowerCase();
 }
 
 function dumpDoc(func, doc) {
