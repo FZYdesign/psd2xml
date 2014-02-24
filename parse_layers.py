@@ -21,19 +21,20 @@ def init_env():
 	return env
 
 
-def layer2view(parent_bounds, layer, orientation, pre_layer=None):
+def layer2view(parent, layer, orientation, pre_layer=None):
+	parent_bounds = parent['bounds']
 	layer_width = layer['bounds'][2] - layer['bounds'][0]
 	layer_height = layer['bounds'][3] - layer['bounds'][1]
 	parent_width = parent_bounds[2] - parent_bounds[0]
 	parent_height = parent_bounds[3] - parent_bounds[1]
 
 	attr = {
-		'name': layer['name'],
-		'layout_width': 'wrap_content',
+	'name': layer['name'],
+	'layout_width': 'wrap_content',
 	}
 
 	# layout_width and layout_height
-	attr.update(get_layout_wh(layer['bounds'], parent_bounds))
+	attr.update(get_layout_wh(layer['bounds'], parent))
 
 	if layer_width > parent_width * 0.9:
 		attr['background'] = '@drawable/' + layer['name']
@@ -41,7 +42,7 @@ def layer2view(parent_bounds, layer, orientation, pre_layer=None):
 		attr['src'] = '@drawable/' + layer['name']
 
 	# get center
-	gravity = getGravity(layer['bounds'], parent_bounds)
+	gravity = getGravity(layer, parent)
 	attr.update(gravity)
 
 	template = env.get_template('ImageView.xml')
@@ -59,60 +60,68 @@ def check_background(layer_bounds, group_bounds):
 	if layer_width > group_width * 0.9 and layer_height > group_height * 0.9:
 		return True
 
-def getGravity(bounds, parent_bounds):
-	if not parent_bounds:
+
+def getGravity(layer, parent):
+	if not parent:
 		return {}
+
+	bounds = layer['bounds']
+	parent_bounds = parent['bounds']
 
 	center_x = (bounds[0] + bounds[2]) / 2
 	center_y = (bounds[1] + bounds[3]) / 2
-	parent_center_x = (parent_bounds[0] + parent_bounds[2]) / 2 
-	parent_center_y = (parent_bounds[1] + parent_bounds[3]) / 2 
+	parent_center_x = (parent_bounds[0] + parent_bounds[2]) / 2
+	parent_center_y = (parent_bounds[1] + parent_bounds[3]) / 2
 
 	attr = {}
 	layout_gravity = []
-	if abs(center_x - parent_center_x ) < (parent_bounds[2] - parent_bounds[0]) * 0.1:
-		layout_gravity.append('center_horizontal')
-		attr['layout_centerHorizontal'] = 'true'
+	if abs(center_x - parent_center_x) < (parent_bounds[2] - parent_bounds[0]) * 0.1:
+		if parent['layout_type'] == 'RelativeLayout':
+			attr['layout_centerHorizontal'] = 'true'
+		else:
+			layout_gravity.append('center_horizontal')
 	if abs(center_y - parent_center_y) < (parent_bounds[3] - parent_bounds[1]) * 0.1:
-		layout_gravity.append('center_vertical')
-		attr['layout_centerVertical'] = 'true'
+		if parent['layout_type'] == 'RelativeLayout':
+			attr['layout_centerVertical'] = 'true'
+		else:
+			layout_gravity.append('center_vertical')
 	if parent_bounds[2] - bounds[2] < (parent_bounds[2] - parent_bounds[0]) * 0.1:
-		layout_gravity.append('right')
-		attr['layout_alignParentRight'] = 'true'
-	
+		if parent['layout_type'] == 'RelativeLayout':
+			attr['layout_alignParentRight'] = 'true'
+		else:
+			layout_gravity.append('right')
+
 	if layout_gravity:
 		attr['layout_gravity'] = '|'.join(layout_gravity)
 	return attr
 
-def group2layout(group, parent_bounds=None):
+
+def group2layout(group, parent=None):
 	xmlns = ''
-	if not parent_bounds:
+	if not parent:
 		xmlns = 'xmlns:android="http://schemas.android.com/apk/res/android"'
 
 	#
 	# get attr
 	#
 	attr = {}
-	group_bounds = get_group_bounds(group)
 
 	# layout_width and layout_height
-	attr.update(get_layout_wh(group_bounds, parent_bounds))
+	attr.update(get_layout_wh(group['bounds'], parent))
+
+	group['bounds'] = get_group_bounds(group['layers'])
 
 	# pick out background layer
 	background_layer = None
-	for layer in group:
-		if check_background(layer['bounds'], group_bounds):
+	for layer in group['layers']:
+		if check_background(layer['bounds'], group['bounds']):
 			background_layer = layer
-			group.remove(layer)
+			group['layers'].remove(layer)
 	if background_layer:
 		attr['background'] = '@drawable/' + background_layer['name']
 
-	# get center
-	gravity = getGravity(get_group_bounds(group), parent_bounds)
-	attr.update(gravity)
-
 	# divide group
-	childs, orientation = divide_group(group)
+	childs, orientation = divide_group(group['layers'])
 
 	# get layout type
 	if len(childs) == 1 and isinstance(childs[0], list):
@@ -121,19 +130,28 @@ def group2layout(group, parent_bounds=None):
 	elif len(childs) < 5:
 		layout_type = 'RelativeLayout'
 	else:
-		if parent_bounds:
+		if parent:
 			layout_type = 'LinearLayout'
 		else:
 			layout_type = 'ScrollView'
+	group['layout_type'] = layout_type
+
+	# get gravity
+	gravity = getGravity(group, parent)
+	attr.update(gravity)
 
 	# gen child views
 	child_views = []
 	for child in childs:
 		if type(child) == list:
-			child_view = group2layout(child, get_group_bounds(group))
+			child_group = {
+			'layers': child,
+			'bounds': get_group_bounds(child),
+			}
+			child_view = group2layout(child_group, group)
 			child_views.append(child_view)
 		elif type(child) == dict:
-			child_view = layer2view(get_group_bounds(group), child, orientation)
+			child_view = layer2view(group, child, orientation)
 			child_views.append(child_view)
 	child_views = ''.join(child_views)
 	attr['orientation'] = orientation
@@ -143,14 +161,15 @@ def group2layout(group, parent_bounds=None):
 	return layout
 
 
-def get_layout_wh(child_bounds, parent_bounds):
+def get_layout_wh(child_bounds, parent):
 	attr = {
-			'layout_width': 'wrap_content',
-			'layout_height': 'wrap_content',
-			}
-	if not parent_bounds:
+	'layout_width': 'wrap_content',
+	'layout_height': 'wrap_content',
+	}
+	if not parent:
 		return attr
 
+	parent_bounds = parent['bounds']
 	child_width = child_bounds[2] - child_bounds[0]
 	child_height = child_bounds[3] - child_bounds[1]
 	parent_width = parent_bounds[2] - parent_bounds[0]
@@ -202,11 +221,13 @@ def divide_group(group):
 
 	return childs, orientation
 
+
 def cmp_layer(a, b):
 	if a['start'] != b['start']:
 		return a['start'] - b['start']
 	else:
 		return a['end'] - b['end']
+
 
 def _divide_group(_group):
 	# divide group into child groups
@@ -251,11 +272,13 @@ def main():
 			layer['bounds'][2] = doc['width']
 		if layer['bounds'][3] > doc['height']:
 			layer['bounds'][3] = doc['height']
+	doc['layers'] = doc['layersInfo']
 
 	# render xml
-	root_layout = group2layout(doc['layersInfo'])
+	root_layout = group2layout(doc)
 	print root_layout
 	exit()
+
 
 if __name__ == '__main__':
 	env = init_env()
