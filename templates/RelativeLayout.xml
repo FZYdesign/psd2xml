@@ -1,5 +1,5 @@
-<RelativeLayout
-	android:layout_width="wrap_content"
-	android:layout_height="wrap_content">
+<RelativeLayout {{ xmlns }}
+	{% for k, v in attr.iteritems() %}android:{{ k }}="{{ v }}"
+	{% endfor %} >
 	{{ childs }}
 </RelativeLayout>

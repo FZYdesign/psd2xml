@@ -1,8 +1,7 @@
 {% for c in comment %}
 <!-- {{ c }} -->{% endfor %}
 <ImageView
-	android:id="@+id/{{ info.name }}"
-	android:layout_height="wrap_content"
-	{% for k, v in info.iteritems() %}android:{{ k }}="{{ v }}"
+	android:id="@+id/{{ attr.name }}"
+	{% for k, v in attr.iteritems() %}android:{{ k }}="{{ v }}"
 	{% endfor %}/>
 
