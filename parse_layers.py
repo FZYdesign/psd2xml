@@ -21,7 +21,7 @@ def init_env():
 	return env
 
 
-def layer2view(parent, layer, orientation, pre_layer=None):
+def layer2view(parent, layer, pre_layer=None):
 	parent_bounds = parent['bounds']
 	layer_width = layer['bounds'][2] - layer['bounds'][0]
 	layer_height = layer['bounds'][3] - layer['bounds'][1]
@@ -112,28 +112,21 @@ def group2layout(group, parent=None):
 	group['bounds'] = get_group_bounds(group['layers'])
 
 	# pick out background layer
-	background_layer = None
+	bg_layers = []
 	for layer in group['layers']:
 		if check_background(layer['bounds'], group['bounds']):
-			background_layer = layer
-			group['layers'].remove(layer)
-	if background_layer:
-		attr['background'] = '@drawable/' + background_layer['name']
+			bg_layers.append(layer)
+	for layer in bg_layers:
+		group['layers'].remove(layer)
+	if bg_layers:
+		attr['background'] = '@drawable/' + bg_layers[len(bg_layers)-1]['name']
 
 	# divide group
-	childs, orientation = divide_group(group['layers'])
-
-	# get layout type
-	if len(childs) == 1 and isinstance(childs[0], list):
-		layout_type = 'RelativeLayout'
-		childs = childs[0]
-	elif len(childs) < 5:
-		layout_type = 'RelativeLayout'
-	else:
-		if parent:
-			layout_type = 'LinearLayout'
-		else:
-			layout_type = 'ScrollView'
+	childs, layout_type, orientation = divide_group(group['layers'])
+	if layout_type == 'LinearLayout' and parent:
+		layout_type = 'ScrollView'
+	if orientation:
+		attr['orientation'] = orientation
 	group['layout_type'] = layout_type
 
 	# get gravity
@@ -151,10 +144,9 @@ def group2layout(group, parent=None):
 			child_view = group2layout(child_group, group)
 			child_views.append(child_view)
 		elif type(child) == dict:
-			child_view = layer2view(group, child, orientation)
+			child_view = layer2view(group, child)
 			child_views.append(child_view)
 	child_views = ''.join(child_views)
-	attr['orientation'] = orientation
 
 	template = env.get_template(layout_type + '.xml')
 	layout = template.render(childs=child_views, attr=attr, xmlns=xmlns)
@@ -196,14 +188,6 @@ def get_group_bounds(group):
 
 
 def divide_group(group):
-	# horizontal divide
-	_group = group[:]
-	for layer in _group:
-		layer['start'] = layer['bounds'][0]
-		layer['end'] = layer['bounds'][2]
-	_group.sort(cmp=cmp_layer)
-	h_childs = _divide_group(_group)
-
 	# vertical divide
 	_group = group[:]
 	for layer in _group:
@@ -211,16 +195,28 @@ def divide_group(group):
 		layer['end'] = layer['bounds'][3]
 	_group.sort(cmp=cmp_layer)
 	v_childs = _divide_group(_group)
+	if len(v_childs) > 5:
+		return v_childs, 'LinearLayout', 'vertical'
 
-	if len(h_childs) > len(v_childs):
-		childs = h_childs
-		orientation = 'horizontal'
-	else:
+	# horizontal divide
+	_group = group[:]
+	for layer in _group:
+		layer['start'] = layer['bounds'][0]
+		layer['end'] = layer['bounds'][2]
+	_group.sort(cmp=cmp_layer)
+	h_childs = _divide_group(_group)
+	if len(h_childs) > 5:
+		return h_childs, 'LinearLayout', 'horizontal'
+
+	if len(v_childs) > len(h_childs):
 		childs = v_childs
-		orientation = 'vertical'
+	else:
+		childs = h_childs
 
-	return childs, orientation
+	if len(childs) == 1 and isinstance(childs[0], list):
+		childs = childs[0]
 
+	return childs, 'RelativeLayout', None
 
 def cmp_layer(a, b):
 	if a['start'] != b['start']:
