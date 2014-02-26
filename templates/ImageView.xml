@@ -1,7 +1,6 @@
 {% for c in comment %}
 <!-- {{ c }} -->{% endfor %}
 <ImageView
-	android:id="@+id/{{ attr.name }}"
 	{% for k, v in attr.iteritems() %}android:{{ k }}="{{ v }}"
 	{% endfor %}/>
 

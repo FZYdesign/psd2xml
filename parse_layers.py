@@ -30,6 +30,7 @@ def layer2view(parent, layer, pre_layer=None):
     parent_height = parent_bounds[3] - parent_bounds[1]
 
     attr = {
+        'id': '@+id/' + layer['name'],
         'layout_width': 'wrap_content',
     }
 
@@ -45,7 +46,7 @@ def layer2view(parent, layer, pre_layer=None):
         attr['src'] = '@drawable/' + layer['name']
 
     # get center
-    gravity = getGravity(layer, parent)
+    gravity = get_gravity(layer, parent)
     attr.update(gravity)
 
     template = env.get_template('ImageView.xml')
@@ -64,38 +65,80 @@ def check_background(layer_bounds, group_bounds):
         return True
 
 
-def getGravity(layer, parent):
+def get_gravity(layer, parent, parent_layout_type=None):
     if not parent:
         return {}
+    h_gravity, v_gravity = _get_gravity(layer, parent)
+    if not parent_layout_type:
+        parent_layout_type = parent['layout_type']
+    return trans_gravity(h_gravity, v_gravity, parent_layout_type)
 
-    bounds = layer['bounds']
-    parent_bounds = parent['bounds']
 
-    center_x = (bounds[0] + bounds[2]) / 2
-    center_y = (bounds[1] + bounds[3]) / 2
-    parent_center_x = (parent_bounds[0] + parent_bounds[2]) / 2
-    parent_center_y = (parent_bounds[1] + parent_bounds[3]) / 2
-
+def trans_gravity(h_gravity, v_gravity, parent_layout_type):
     attr = {}
     layout_gravity = []
-    if abs(center_x - parent_center_x) < (parent_bounds[2] - parent_bounds[0]) * 0.1:
-        if parent['layout_type'] == 'RelativeLayout':
+    if (parent_layout_type == 'RelativeLayout'):
+        if h_gravity == 'center':
             attr['layout_centerHorizontal'] = 'true'
-        else:
-            layout_gravity.append('center_horizontal')
-    if abs(center_y - parent_center_y) < (parent_bounds[3] - parent_bounds[1]) * 0.1:
-        if parent['layout_type'] == 'RelativeLayout':
-            attr['layout_centerVertical'] = 'true'
-        else:
-            layout_gravity.append('center_vertical')
-    if parent_bounds[2] - bounds[2] < (parent_bounds[2] - parent_bounds[0]) * 0.1 \
-        and bounds[2] - bounds[0] < (parent_bounds[2] - parent_bounds[0] * 0.1) \
-        and layer.get('layout_type') != 'RelativeLayout':
-        layout_gravity.append('right')
+        elif h_gravity == 'left':
+            attr['layout_alignParentLeft'] = 'true'
+        elif h_gravity == 'right':
+            attr['layout_alignParentRight'] = 'true'
 
-    if layout_gravity:
-        attr['layout_gravity'] = '|'.join(layout_gravity)
-    return attr
+        if v_gravity == 'center':
+            attr['layout_centerVertical'] = 'true'
+        elif v_gravity == 'left':
+            attr['layout_alignParentTop'] = 'true'
+        elif v_gravity == 'right':
+            attr['layout_alignParentBottom'] = 'true'
+        return attr
+    else:
+        if h_gravity == 'center':
+            layout_gravity.append('center_horizontal')
+        elif h_gravity == 'left':
+            layout_gravity.append('left')
+        elif h_gravity == 'right':
+            layout_gravity.append('right')
+
+        if v_gravity == 'center':
+            layout_gravity.append('center_horizontal')
+        elif v_gravity == 'left':
+            layout_gravity.append('top')
+        elif v_gravity == 'right':
+            layout_gravity.append('bottom')
+        return {'layout_gravity': '|'.join(layout_gravity)}
+
+
+def _get_gravity(layer, parent):
+    parent_left = parent['bounds'][0]
+    parent_top = parent['bounds'][1]
+    parent_right = parent['bounds'][2]
+    parent_bottom = parent['bounds'][3]
+    parent_center_h, parent_center_v = get_center(parent['bounds'])
+    layer_left = layer['bounds'][0]
+    layer_top = layer['bounds'][1]
+    layer_right = layer['bounds'][2]
+    layer_bottom = layer['bounds'][3]
+
+    layer_radius = (layer_right - layer_left + layer_bottom - layer_top) / 2
+    v_gravity = None
+    h_gravity = None
+
+    if parent_center_h > layer_left and parent_center_h < layer_right:
+        h_gravity = 'center'
+    elif abs(layer_left - parent_left) < layer_radius:
+        h_gravity = 'left'
+    elif abs(layer_right - parent_right) < layer_radius:
+        h_gravity = 'right'
+
+    if parent_center_v > layer_top and parent_center_v < layer_bottom:
+        v_gravity = 'center'
+    elif abs(layer_top - parent_top) < layer_radius:
+        v_gravity = 'top'
+    elif abs(layer_bottom - parent_bottom) < layer_radius:
+        v_gravity = 'bottom'
+
+    return h_gravity, v_gravity
 
 
 def group2layout(group, parent=None):
@@ -132,7 +175,7 @@ def group2layout(group, parent=None):
     group['layout_type'] = layout_type
 
     # get gravity
-    gravity = getGravity(group, parent)
+    gravity = get_gravity(group, parent)
     attr.update(gravity)
 
     # gen child views
@@ -213,35 +256,14 @@ def get_key_points(bounds):
 
 
 def is_relative_layout(group, childs):
-    key_points = get_key_points(group['bounds'])
-
     for child in childs:
-        child_key_points = get_key_points(child['bounds'])
-        child_radius = (child['bounds'][2] -  child['bounds'][0] + child['bounds'][3] - child['bounds'][1]) / 2
-        attr = {}
-        for i in range(len(child_key_points)):
-            if get_distance(child_key_points[i], key_points[i]) < child_radius:
-                if i in [0, 1, 2]:
-                    attr['layout_alignParentTop'] = 'true'
-                elif i in [3, 4, 5]:
-                    attr['layout_centerVertical'] = 'true'
-                elif i in [6, 7, 8]:
-                    attr['layout_alignParentBottom'] = 'true'
-
-                if i in [0, 3, 6]:
-                    attr['layout_alignParentLeft'] = 'true'
-                elif i in [1, 4, 7]:
-                    attr['layout_centerHorizontal'] = 'true'
-                elif i in [2, 5, 8]:
-                    attr['layout_alignParentRight'] = 'true'
-
-                if attr:
-                    child['attr'] = attr
-
-                break
-        else:
+        h_gravity, v_gravity = _get_gravity(child, group)
+        if not h_gravity or not v_gravity:
             return False
-
+        attr = get_gravity(child, group, 'RelativeLayout')
+        if child.get('attr'):
+            attr.update(child['attr'])
+        child['attr'] = attr
     return True
 
 
@@ -274,7 +296,6 @@ def divide_group(group):
         orientation = 'horizontal'
 
     if len(childs) == 1 and isinstance(childs[0], list):
-        childs = childs[0]
         return childs, 'RelativeLayout', None
 
     if is_relative_layout(group, group['layers']):
