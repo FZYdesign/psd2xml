@@ -30,8 +30,8 @@ def layer2view(parent, layer, pre_layer=None):
     parent_height = parent_bounds[3] - parent_bounds[1]
 
     attr = {
-        'id': '@+id/' + layer['name'],
-        'layout_width': 'wrap_content',
+    'id': '@+id/' + layer['name'],
+    'layout_width': 'wrap_content',
     }
 
     if layer.get('attr'):
@@ -166,25 +166,33 @@ def group2layout(group, parent=None):
     if bg_layers:
         attr['background'] = '@drawable/' + bg_layers[len(bg_layers) - 1]['name']
 
+    # get gravity
+    gravity = get_gravity(group, parent)
+    attr.update(gravity)
+
+    if not group['layers']:
+        group['layout_type'] = 'RelativeLayout'
+        template = env.get_template(group['layout_type'] + '.xml')
+        layout = template.render(attr=attr, xmlns=xmlns)
+        return layout
+
     # divide group
     childs, layout_type, orientation = divide_group(group)
+    if len(childs) == 1 and not bg_layers:
+        childs = childs[0]
     if layout_type == 'LinearLayout' and not parent:
         layout_type = 'ScrollView'
     if orientation:
         attr['orientation'] = orientation
     group['layout_type'] = layout_type
 
-    # get gravity
-    gravity = get_gravity(group, parent)
-    attr.update(gravity)
-
     # gen child views
     child_views = []
     for child in childs:
         if type(child) == list:
             child_group = {
-                'layers': child,
-                'bounds': get_group_bounds(child),
+            'layers': child,
+            'bounds': get_group_bounds(child),
             }
             child_view = group2layout(child_group, group)
             child_views.append(child_view)
@@ -200,8 +208,8 @@ def group2layout(group, parent=None):
 
 def get_layout_wh(child_bounds, parent):
     attr = {
-        'layout_width': 'wrap_content',
-        'layout_height': 'wrap_content',
+    'layout_width': 'wrap_content',
+    'layout_height': 'wrap_content',
     }
     if not parent:
         return attr
@@ -275,7 +283,7 @@ def divide_group(group):
         layer['end'] = layer['bounds'][3]
     layers.sort(cmp=cmp_layer)
     v_childs = _divide_group(layers)
-    if (len(v_childs) > 5):
+    if (len(v_childs) > 3):
         return v_childs, 'LinearLayout', 'vertical'
 
     # horizontal divide
@@ -285,7 +293,7 @@ def divide_group(group):
         layer['end'] = layer['bounds'][2]
     layers.sort(cmp=cmp_layer)
     h_childs = _divide_group(layers)
-    if (len(h_childs) > 5):
+    if (len(h_childs) > 3):
         return h_childs, 'LinearLayout', 'horizontal'
 
     if len(v_childs) > len(h_childs):
